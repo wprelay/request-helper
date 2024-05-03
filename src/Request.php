@@ -3,7 +3,6 @@
 namespace Cartrabbit\Request;
 
 use Cartrabbit\Request\Validation\Rules;
-use Cartrabbit\Request\Validation\ValidateHelper;
 use Valitron\Validator;
 
 class Request
@@ -98,7 +97,7 @@ class Request
         }
 
         if (is_array($value)) {
-            return Functions::dataGet($value, $key, $default);
+            return Helper::dataGet($value, $key, $default);
         } else {
             return $value;
         }
@@ -211,7 +210,7 @@ class Request
 
     public function addCustomRules()
     {
-        if($this->customRuleInstance instanceof Rules)  {
+        if ($this->customRuleInstance instanceof Rules) {
             $this->customRuleInstance->addCustomRules();
         }
     }
@@ -219,45 +218,24 @@ class Request
     public function mapCustomErrorMessages($validator, $rules, $messages)
     {
         return $validator;
-        foreach ($rules as $key => $rule) {
-            foreach ($rule as $ruleType) {
-                if (is_array($ruleType)) {
-                    $type = $ruleType[0];
-                } else {
-                    $type = $ruleType;
-                }
 
-                $messageKey = "{$key}.{$type}";
-
-                if (!in_array($messageKey, array_keys($messages))) continue;
-
-//                var_dump([$key, $type, $messages[$messageKey]]);
-
-                $validator->rule($type, $key)->message($messages[$messageKey]);
-            }
-        }
-
-        return $validator;
+//        foreach ($rules as $key => $rule) {
+//            foreach ($rule as $ruleType) {
+//                if (is_array($ruleType)) {
+//                    $type = $ruleType[0];
+//                } else {
+//                    $type = $ruleType;
+//                }
+//
+//                $messageKey = "{$key}.{$type}";
+//
+//                if (!in_array($messageKey, array_keys($messages))) continue;
+//
+////                var_dump([$key, $type, $messages[$messageKey]]);
+//
+//                $validator->rule($type, $key)->message($messages[$messageKey]);
+//            }
+//        }
     }
 
-    public function getWordFromRequestKey($key)
-    {
-        $result = str_replace('_', ' ', $key);
-
-        return ucwords($result);
-    }
-
-    public static function isColumnUnique($table, $column, $value, $excludeColumnName = null, $excludeColumnId = null)
-    {
-        $items = (new Database($table))->where("$column = %s", [$value])
-            ->when(!empty($excludeColumnName) && $excludeColumnId, function ($query) use ($column, $value, $excludeColumnId, $excludeColumnName) {
-                $query->where("{$excludeColumnName} not in (%s)", [$excludeColumnId]);
-            });
-
-        $items = $items->get();
-
-        if (empty($items)) return true;
-
-        return false;
-    }
 }
