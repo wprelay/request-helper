@@ -1,0 +1,18 @@
+{
+    "name": "cartrabbit/request-helper",
+    "description": "Request class Wrapper with Validation",
+    "require": {
+        "vlucas/valitron": "^1.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cartrabbit\\Request\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "benitto raj",
+            "email": "benittobeny34@gmail.com"
+        }
+    ]
+}
