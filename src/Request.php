@@ -63,6 +63,8 @@ class Request
             throw new \Exception("Custom Rule Class must be instance  Rules");
         }
 
+        return $this;
+
     }
 
 
