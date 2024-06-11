@@ -7,5 +7,5 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'Valitron\\' => array($vendorDir . '/vlucas/valitron/src/Valitron'),
-    'Cartrabbit\\RequestHelper\\' => array($baseDir . '/src'),
+    'Cartrabbit\\Request\\' => array($baseDir . '/src'),
 );

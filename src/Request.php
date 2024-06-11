@@ -7,12 +7,13 @@ use Valitron\Validator;
 
 class Request
 {
-
     protected $query;
     protected $post;
     protected $cookies;
 
     public static $validator;
+
+    public $data = [];
 
     protected $customRuleInstance;
 
@@ -38,21 +39,22 @@ class Request
         'array' => [__CLASS__, 'sanitizeArray'],
     ];
 
-    public function __construct()
+    public function __construct($data)
     {
-        [$get, $post] = $this->getInputs();
-        $this->initialize($get, $post, $_COOKIE);
+        $this->initialize($data);
     }
 
     protected static $request;
 
-    public static function make()
-    {
-        if (!isset(self::$request)) {
-            return self::$request = new self();
-        }
 
-        return self::$request;
+    public static function getSanitizedUserInput($data)
+    {
+        return static::sanitizeUserData($data, 'array');
+    }
+
+    public static function make($data)
+    {
+        return new self($data);
     }
 
     public function setCustomRuleInstance($object)
@@ -67,42 +69,58 @@ class Request
 
     }
 
-
-    private function initialize($get = [], $post = [], $cookies = [])
+    private function initialize($data)
     {
-        $this->query = new InputBag($get);
-        $this->post = new InputBag($post);
-        $this->cookies = new InputBag($cookies);
+        $this->data = $data;
     }
 
-    public function get($key, $default = null, $type = 'text')
+    private static function sanitizeUserData($data, $type)
     {
-        $value = $this->getFromRequest($key, $default);
-
-        $type = gettype($value);
+        $type = $type ?: gettype($data);
 
         if (!in_array($type, array_keys(static::$sanitizeCallbacks))) {
             throw new \UnexpectedValueException('The sanitization Type is Not Present in the request class');
         }
 
-        return call_user_func(static::$sanitizeCallbacks[$type], $value);
+        return call_user_func(static::$sanitizeCallbacks[$type], $data);
     }
 
-    public function getFromRequest($key, $default = null)
+    public static function sanitize($value, $type)
     {
-        if ($this->query->has($key)) {
-            return $this->query->get($key);
-        } else if ($this->post->has($key)) {
-            return $this->post->get($key);
-        } else {
-            $value = $this->all();
+        //sanitize directly if neeed
+    }
+
+    public function get($key, $default = null, $type = 'text')
+    {
+        return Helper::dataGet($this->data, $key, $default);
+    }
+
+
+    public function cookie($key, $default = null)
+    {
+        if (isset($_COOKIE[$key])) {
+            return $_COOKIE[$key];
         }
 
-        if (is_array($value)) {
-            return Helper::dataGet($value, $key, $default);
-        } else {
-            return $value;
+        return $default;
+    }
+
+    public function session($key, $default = null)
+    {
+        if (isset($_SESSION[$key])) {
+            return $_SESSION[$key];
         }
+
+        return $default;
+    }
+
+    public function server($key, $default = null)
+    {
+        if (isset($_SERVER[$key])) {
+            return $_SERVER[$key];
+        }
+
+        return $default;
     }
 
 
@@ -113,43 +131,7 @@ class Request
 
     public function all()
     {
-        return array_merge($this->query->all(), $this->post->all(), $this->cookies->all());
-    }
-
-    private function getInputs()
-    {
-        $method = $_SERVER['REQUEST_METHOD'];
-        $get = [];
-        $post = [];
-        switch (strtoupper($method)) {
-            case 'GET':
-                $get = $_GET;
-            case 'POST':
-            case 'PUT':
-            case 'PATCH':
-            case 'DELETE':
-                $post = $this->getUserInputs();
-        }
-
-        return [$get ?? [], $post ?? []];
-    }
-
-    private function getUserInputs()
-    {
-        if (!isset($_SERVER['CONTENT_TYPE'])) {
-            $_SERVER['CONTENT_TYPE'] = 'application/x-www-form-urlencoded';
-        }
-
-        if ($_SERVER['CONTENT_TYPE'] == 'application/x-www-form-urlencoded' || strpos($_SERVER['CONTENT_TYPE'], 'application/x-www-form-urlencoded') !== false) {
-            $post = $_POST;
-        } else {
-            $json = file_get_contents('php://input');
-
-            $data = json_decode($json, true);
-            $post = $data;
-        }
-
-        return $post;
+        return $this->data;
     }
 
     public static function collapse($array)
@@ -167,25 +149,51 @@ class Request
         return array_merge([], ...$results);
     }
 
-    public static function sanitizeArray($value)
+    private static function sanitizeArray($value)
     {
-        return $value;
+        return static::sanitizeArrayRecursively($value);
+    }
+
+    private static function sanitizeArrayRecursively($arr)
+    {
+        $newArr = array();
+
+        foreach ($arr as $key => $value) {
+            $newArr[$key] = (is_array($value) ? static::sanitizeArrayRecursively($value) : sanitize_text_field($value));
+        }
+
+        return $newArr;
     }
 
 
-    public function validate($object, array $additionalRules = [])
+    public function validate($object)
     {
-
-        if (is_object($object)) {
-            $rules = array_merge($object->rules($this), $additionalRules);
-        } else {
-            $rules = array_merge($object, $additionalRules);
-        }
-
+        $rules_array = $object->rules($this);
+        $messages = $object->messages();
 
         $validator = $this->getValidator();
 
-        $validator->mapFieldsRules($rules);
+        foreach ($rules_array as $field => $rules) {
+            foreach ($rules as $rule) {
+                if (is_string($rule)) {
+                    $validator->rule($rule, $field);
+                } else if (is_array($rule)) {
+                    if (is_array($rule[1])) {
+                        $validator->rule($rule[0], $field, $rule[1]);
+                    } else {
+                        $rest = $rule;
+                        //this will remove and rearrange the index
+                        array_shift($rest);
+
+                        echo "<pre>";
+                        var_dump($rule);
+                        echo "</pre>";
+                        $validator->rule($rule[0], $field, ...$rest);
+                    }
+                }
+            }
+        }
+
 
 //        $validator = $this->mapCustomErrorMessages($validator, $rules, $messages);
 
