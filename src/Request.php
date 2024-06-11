@@ -7,9 +7,6 @@ use Valitron\Validator;
 
 class Request
 {
-    protected $query;
-    protected $post;
-    protected $cookies;
 
     public static $validator;
 
@@ -123,12 +120,6 @@ class Request
         return $default;
     }
 
-
-    public function addError($key, $message)
-    {
-        $this->errors[$key] = $message;
-    }
-
     public function all()
     {
         return $this->data;
@@ -165,6 +156,16 @@ class Request
         return $newArr;
     }
 
+    public function getMessage($field, $rule_name, $messages)
+    {
+        $message_key = "{$field}.{$rule_name}";
+
+        if (isset($messages[$message_key])) {
+            return $messages[$message_key];
+        }
+
+        return null;
+    }
 
     public function validate($object)
     {
@@ -176,26 +177,22 @@ class Request
         foreach ($rules_array as $field => $rules) {
             foreach ($rules as $rule) {
                 if (is_string($rule)) {
-                    $validator->rule($rule, $field);
+                    $message = $this->getMessage($field, $rule, $messages);
+                    $message ? $validator->rule($rule, $field)->message($message) : $validator->rule($rule, $field);
                 } else if (is_array($rule)) {
+                    $message = $this->getMessage($field, $rule[0], $messages);
+
                     if (is_array($rule[1])) {
-                        $validator->rule($rule[0], $field, $rule[1]);
+                        $message ? $validator->rule($rule[0], $field, $rule[1])->message($message) : $validator->rule($rule[0], $field, $rule[1]);
                     } else {
                         $rest = $rule;
                         //this will remove and rearrange the index
                         array_shift($rest);
-
-                        echo "<pre>";
-                        var_dump($rule);
-                        echo "</pre>";
-                        $validator->rule($rule[0], $field, ...$rest);
+                        $message ? $validator->rule($rule[0], $field, ...$rest)->message($message) : $validator->rule($rule[0], $field, ...$rest);
                     }
                 }
             }
         }
-
-
-//        $validator = $this->mapCustomErrorMessages($validator, $rules, $messages);
 
         if (!$validator->validate()) {
             $errors = $validator->errors();
@@ -224,28 +221,4 @@ class Request
             $this->customRuleInstance->addCustomRules();
         }
     }
-
-    public function mapCustomErrorMessages($validator, $rules, $messages)
-    {
-        return $validator;
-
-//        foreach ($rules as $key => $rule) {
-//            foreach ($rule as $ruleType) {
-//                if (is_array($ruleType)) {
-//                    $type = $ruleType[0];
-//                } else {
-//                    $type = $ruleType;
-//                }
-//
-//                $messageKey = "{$key}.{$type}";
-//
-//                if (!in_array($messageKey, array_keys($messages))) continue;
-//
-////                var_dump([$key, $type, $messages[$messageKey]]);
-//
-//                $validator->rule($type, $key)->message($messages[$messageKey]);
-//            }
-//        }
-    }
-
 }
