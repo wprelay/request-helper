@@ -12,6 +12,8 @@ class Request
 
     public $data = [];
 
+    public $original = [];
+
     protected $customRuleInstance;
 
     protected static $sanitizeCallbacks = [
@@ -49,6 +51,11 @@ class Request
         return static::sanitizeUserData($data, 'array');
     }
 
+    public static function gtOriginal($data)
+    {
+        return static::sanitizeUserData($data, 'array');
+    }
+
     public static function make($data)
     {
         return new self($data);
@@ -68,7 +75,8 @@ class Request
 
     private function initialize($data)
     {
-        $this->data = $data;
+        $this->original = $data;
+        $this->data = Request::getSanitizedUserInput($data);
     }
 
     private static function sanitizeUserData($data, $type)
@@ -90,6 +98,12 @@ class Request
     public function get($key, $default = null, $type = 'text')
     {
         return Helper::dataGet($this->data, $key, $default);
+    }
+
+    public function getOriginal($key, $default = null, $type = 'text')
+    {
+        error_log(print_r($this->original, true));
+        return Helper::dataGet($this->original, $key, $default);
     }
 
 
