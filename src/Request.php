@@ -38,13 +38,17 @@ class Request
         'array' => [__CLASS__, 'sanitizeArray'],
     ];
 
+    protected static $request;
+
     public function __construct($data)
     {
         $this->initialize($data);
     }
 
-    protected static $request;
-
+    public static function getRequest()
+    {
+        return static::$request;
+    }
 
     public static function getSanitizedUserInput($data)
     {
@@ -58,7 +62,13 @@ class Request
 
     public static function make($data)
     {
-        return new self($data);
+        if (isset(static::$request)) {
+            return static::$request;
+
+        }
+
+         static::$request = new self($data);
+        return static::$request;
     }
 
     public function setCustomRuleInstance($object)
@@ -102,7 +112,6 @@ class Request
 
     public function getOriginal($key, $default = null, $type = 'text')
     {
-        error_log(print_r($this->original, true));
         return Helper::dataGet($this->original, $key, $default);
     }
 
