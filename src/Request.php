@@ -105,33 +105,6 @@ class Request
         return Helper::dataGet($this->data, $key, $default);
     }
 
-    public function cookie($key, $default = null)
-    {
-        if (isset($_COOKIE[$key])) {
-            return $_COOKIE[$key];
-        }
-
-        return $default;
-    }
-
-    public function session($key, $default = null)
-    {
-        if (isset($_SESSION[$key])) {
-            return $_SESSION[$key];
-        }
-
-        return $default;
-    }
-
-    public function server($key, $default = null)
-    {
-        if (isset($_SERVER[$key])) {
-            return $_SERVER[$key];
-        }
-
-        return $default;
-    }
-
     public function all()
     {
         return $this->data;
