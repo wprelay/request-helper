@@ -7,12 +7,9 @@ use Valitron\Validator;
 
 class Request
 {
-
     public static $validator;
 
     public $data = [];
-
-    public $original = [];
 
     protected $customRuleInstance;
 
@@ -55,19 +52,13 @@ class Request
         return static::sanitizeUserData($data, 'array');
     }
 
-    public static function gtOriginal($data)
-    {
-        return static::sanitizeUserData($data, 'array');
-    }
-
     public static function make($data)
     {
         if (isset(static::$request)) {
             return static::$request;
-
         }
 
-         static::$request = new self($data);
+        static::$request = new self($data);
         return static::$request;
     }
 
@@ -80,13 +71,11 @@ class Request
         }
 
         return $this;
-
     }
 
     private function initialize($data)
     {
-        $this->original = $data;
-        $this->data = Request::getSanitizedUserInput($data);
+        $this->data = $data;
     }
 
     private static function sanitizeUserData($data, $type)
@@ -107,14 +96,14 @@ class Request
 
     public function get($key, $default = null, $type = 'text')
     {
-        return Helper::dataGet($this->data, $key, $default);
+        $value = call_user_func(static::$sanitizeCallbacks[$type], Helper::dataGet($this->data, $key, $default));
+        return $this->filterXss($value);
     }
 
     public function getOriginal($key, $default = null, $type = 'text')
     {
-        return Helper::dataGet($this->original, $key, $default);
+        return Helper::dataGet($this->data, $key, $default);
     }
-
 
     public function cookie($key, $default = null)
     {
@@ -243,5 +232,32 @@ class Request
         if ($this->customRuleInstance instanceof Rules) {
             $this->customRuleInstance->addCustomRules();
         }
+    }
+
+    public function filterXss(string $data): string
+    {
+        // Fix &entity\n;
+        $data = str_replace(['&amp;', '&lt;', '&gt;'], ['&amp;amp;', '&amp;lt;', '&amp;gt;'], $data);
+        $data = preg_replace('/(&#*\w+)[\x00-\x20]+;/u', '$1;', $data);
+        $data = preg_replace('/(&#x*[0-9A-F]+);*/iu', '$1;', $data);
+        $data = html_entity_decode($data, ENT_COMPAT, 'UTF-8');
+
+        // Remove any attribute starting with "on" or xmlns
+        $data = preg_replace('#(<[^>]+?[\x00-\x20"\'])(?:on|xmlns)[^>]*+>#iu', '$1>', $data);
+
+        // Remove javascript: and vbscript: protocols
+        $data = preg_replace('#([a-z]*)[\x00-\x20]*=[\x00-\x20]*([`\'"]*)[\x00-\x20]*j[\x00-\x20]*a[\x00-\x20]*v[\x00-\x20]*a[\x00-\x20]*s[\x00-\x20]*c[\x00-\x20]*r[\x00-\x20]*i[\x00-\x20]*p[\x00-\x20]*t[\x00-\x20]*:#iu', '$1=$2nojavascript...', $data);
+        $data = preg_replace('#([a-z]*)[\x00-\x20]*=([\'"]*)[\x00-\x20]*v[\x00-\x20]*b[\x00-\x20]*s[\x00-\x20]*c[\x00-\x20]*r[\x00-\x20]*i[\x00-\x20]*p[\x00-\x20]*t[\x00-\x20]*:#iu', '$1=$2novbscript...', $data);
+        $data = preg_replace('#([a-z]*)[\x00-\x20]*=([\'"]*)[\x00-\x20]*-moz-binding[\x00-\x20]*:#u', '$1=$2nomozbinding...', $data);
+
+        // Remove namespaced elements (we do not need them)
+        $data = preg_replace('#</*\w+:\w[^>]*+>#i', '', $data);
+
+        // Remove really unwanted tags
+        do {
+            $old_data = $data;
+            $data = preg_replace('#</*(?:applet|b(?:ase|gsound|link)|embed|frame(?:set)?|i(?:frame|layer)|l(?:ayer|ink)|meta|object|s(?:cript|tyle)|title|xml)[^>]*+>#i', '', $data);
+        } while ($old_data !== $data);
+        return is_string($data) ? $data : '';
     }
 }
