@@ -96,8 +96,19 @@ class Request
 
     public function get($key, $default = null, $type = 'text')
     {
-        $value = call_user_func(static::$sanitizeCallbacks[$type], Helper::dataGet($this->data, $key, $default));
-        return $this->filterXss($value);
+        $value = Helper::dataGet($this->data, $key, $default);
+
+        if (is_array($value)) {
+            $type = 'array';
+        }
+
+        $value = call_user_func(static::$sanitizeCallbacks[$type], $value);
+
+        if (is_string($value)) {
+            return $this->filterXss($value);
+        }
+
+        return $value;
     }
 
     public function getOriginal($key, $default = null, $type = 'text')
