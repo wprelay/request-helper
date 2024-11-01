@@ -13,7 +13,7 @@ class ComposerStaticInit6e2b35aaad946f7dc41f101fa97a525c
         ),
         'C' => 
         array (
-            'Cartrabbit\\RequestHelper\\' => 25,
+            'Cartrabbit\\Request\\' => 19,
         ),
     );
 
@@ -22,7 +22,7 @@ class ComposerStaticInit6e2b35aaad946f7dc41f101fa97a525c
         array (
             0 => __DIR__ . '/..' . '/vlucas/valitron/src/Valitron',
         ),
-        'Cartrabbit\\RequestHelper\\' => 
+        'Cartrabbit\\Request\\' => 
         array (
             0 => __DIR__ . '/../..' . '/src',
         ),
