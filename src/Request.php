@@ -37,9 +37,10 @@ class Request
 
     protected static $request;
 
-    public function __construct($data)
+    public function __construct()
     {
-        $this->initialize($data);
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $this->data = array_merge($_GET, $_POST);
     }
 
     public static function getRequest()
@@ -52,13 +53,13 @@ class Request
         return static::sanitizeUserData($data, 'array');
     }
 
-    public static function make($data)
+    public static function make()
     {
         if (isset(static::$request)) {
             return static::$request;
         }
 
-        static::$request = new self($data);
+        static::$request = new self();
         return static::$request;
     }
 
@@ -71,11 +72,6 @@ class Request
         }
 
         return $this;
-    }
-
-    private function initialize($data)
-    {
-        $this->data = $data;
     }
 
     private static function sanitizeUserData($data, $type)
@@ -125,6 +121,7 @@ class Request
         return $default;
     }
 
+
     public static function session($key, $default = null)
     {
         if (isset($_SESSION[$key])) {
@@ -145,7 +142,8 @@ class Request
 
     public function all()
     {
-        return $this->data;
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        return array_merge($_GET, $_POST);
     }
 
     public static function collapse($array)
