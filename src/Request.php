@@ -269,4 +269,20 @@ class Request
         } while ($old_data !== $data);
         return is_string($data) ? $data : '';
     }
+
+    public static function sanitizeHtml(string $value): string
+    {
+        return wp_kses_post($value);
+    }
+
+    /**
+     * Sanitize text and allow HTML without input tags and attributes.
+     *
+     * @param string $value Content.
+     * @return string
+     */
+    public static function sanitizeContent(string $value): string
+    {
+        return wp_kses_post($value);
+    }
 }
